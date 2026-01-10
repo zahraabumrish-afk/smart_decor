@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import 'upload_photo_screen.dart';
+import 'package:smart_decor/features/style_quiz/screens/style_quiz_intro_screen.dart';
 
 class PathsScreen extends StatelessWidget {
   const PathsScreen({super.key});
@@ -74,11 +75,16 @@ class PathsScreen extends StatelessWidget {
                 _PathButton(
                   icon: Icons.quiz_outlined,
                   text: 'Style Quiz',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming Soon')),
-                    );
-                  },
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StyleQuizIntroScreen()
+                        ),
+                      );
+                    },
+
+
                 ),
                 const SizedBox(height: 12),
 
