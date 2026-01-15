@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'upload_photo_screen.dart';
 import 'package:smart_decor/features/style_quiz/screens/style_quiz_intro_screen.dart';
+import '../app_routes.dart';
 
 class PathsScreen extends StatelessWidget {
   const PathsScreen({super.key});
@@ -92,9 +93,7 @@ class PathsScreen extends StatelessWidget {
                   icon: Icons.auto_awesome_outlined,
                   text: 'AI Design',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Coming Soon')),
-                    );
+                    Navigator.pushNamed(context, AppRoutes.designRequestUpload);
                   },
                 ),
 

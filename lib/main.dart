@@ -3,6 +3,9 @@ import 'app_routes.dart';
 import 'screens/login_screen.dart';
 import 'screens/paths_screen.dart';
 
+// Path 3
+import 'desing_request/screens/design_request_upload_screen.dart';
+
 void main() {
   runApp(const SmartDecorApp());
 }
@@ -19,6 +22,9 @@ class SmartDecorApp extends StatelessWidget {
       routes: {
         AppRoutes.login: (_) => const LoginScreen(),
         AppRoutes.paths: (_) => const PathsScreen(),
+
+        // Path 3 route
+        AppRoutes.designRequestUpload: (_) => const DesignRequestUploadScreen(),
       },
     );
   }
