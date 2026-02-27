@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -195,15 +196,9 @@ class _DesignRequestUploadScreenState extends State<DesignRequestUploadScreen> {
                       ? SizedBox.expand(
                     // ✅ الصورة تملى المربع كامل (تظهر صح)
                     child: kIsWeb
-                        ? Image.memory(
-                      _webBytes!,
-                      fit: BoxFit.cover,
-                    )
-                        : Image.network(
-                      _picked!.path,
-                      fit: BoxFit.cover,
-                    ),
-                  )
+                      ? Image.memory(_webBytes!, fit: BoxFit.cover)
+                      : Image.file(File(_picked!.path), fit: BoxFit.cover),
+                      )
                       : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [

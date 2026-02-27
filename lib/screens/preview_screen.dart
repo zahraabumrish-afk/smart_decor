@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:smart_decor/desing_request/screens/design_request_result_screen.dart';
 
 /// -------------------- In-memory store (no extra files) --------------------
 class SavedDesign {
@@ -42,11 +46,13 @@ class SavedDesignsStore extends ChangeNotifier {
 class PreviewScreen extends StatefulWidget {
   final String imagePath;
   final String title;
+  final XFile? frontImage;
 
   const PreviewScreen({
     super.key,
     required this.imagePath,
     required this.title,
+    this.frontImage,
   });
 
   @override
@@ -215,14 +221,17 @@ class _PreviewScreenState extends State<PreviewScreen> {
     label: const Text("Generate AI Design",
       style: TextStyle(fontWeight: FontWeight.w800),
     ),
-      onPressed: () {
+      onPressed: () async {
+        final ByteData data = await rootBundle.load(widget.imagePath);
+        final Uint8List bytes = data.buffer.asUint8List();
+
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => GeneratingScreen(
-              imagePath: widget.imagePath,
-              title: widget.title,
-              chosenOverlay: _overlayColor,
+            builder: (_) => DesignRequestResultScreen(
+              prompt: widget.title,
+              pickedImage: XFile(''), // dummy
+              webBytes: bytes,
             ),
           ),
         );

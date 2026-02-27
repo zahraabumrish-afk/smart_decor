@@ -1,15 +1,18 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'preview_screen.dart';
 
 class GalleryScreen extends StatelessWidget {
   final String title;
   final List<String> images;
+  final XFile? image;
 
   const GalleryScreen({
     super.key,
     required this.title,
     required this.images,
+    this.image,
   });
 
   @override
@@ -88,6 +91,7 @@ class GalleryScreen extends StatelessWidget {
                                     builder: (_) => PreviewScreen(
                                       imagePath: path,
                                       title: '$title Preview',
+                                      frontImage: image
                                     ),
                                   ),
                                 );

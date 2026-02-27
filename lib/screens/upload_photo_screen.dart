@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -138,12 +139,18 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
   void _continue() {
     if (!_allSelected) return;
 
-    // IMPORTANT: we keep your current flow (no params to avoid red lines)
+    final XFile? front = _images[RoomAngle.front];
+
+    if (front == null) return;
+
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const RoomTypeScreen()),
+      MaterialPageRoute(
+        builder: (_) => RoomTypeScreen(frontImage: front),
+      ),
     );
-  }@override
+  }
+  @override
   Widget build(BuildContext context) {return Scaffold(
     body: Stack(
       children: [
@@ -292,10 +299,10 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
             children: [
               if (file != null)
                 Positioned.fill(
-                  child: Image.network(
-                    file.path, // works on web + shows instantly
+                  child: Image.file(
+                    File(file.path),
                     fit: BoxFit.cover,
-                  ),
+                  )
                 ),
 
               // dark overlay for readability

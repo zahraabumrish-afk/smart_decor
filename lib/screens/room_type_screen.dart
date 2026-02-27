@@ -1,11 +1,16 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'gallery_screen.dart';
 
 class RoomTypeScreen extends StatelessWidget {
   final String? userImagePath;
+  final XFile? frontImage;
 
-  const RoomTypeScreen({super.key, this.userImagePath});
+  const RoomTypeScreen({
+    super.key, this.userImagePath,
+    this.frontImage,
+  });
 
   List<String> _roomImages(String folder) {
     // 6 images as assets: 1.jpg .. 10.jpg
@@ -77,6 +82,7 @@ class RoomTypeScreen extends StatelessWidget {
                           builder: (_) => GalleryScreen(
                             title: 'Living Room Gallery',
                             images: _roomImages('living_room'),
+                            image: frontImage
                           ),
                         ),
                       );

@@ -9,11 +9,13 @@ class StyleQuizPreviewScreen extends StatefulWidget {
     required this.title,
     required this.selectedImageAsset,
     required this.backgroundAssetPath,
+    this.prompt
   });
 
   final String title;
   final String selectedImageAsset;
   final String backgroundAssetPath;
+  final String? prompt;
 
   @override
   State<StyleQuizPreviewScreen> createState() => _StyleQuizPreviewScreenState();
