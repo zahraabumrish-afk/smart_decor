@@ -80,12 +80,38 @@ flutter:
     - assets/office/
     - assets/logo/
     - assets/backgrounds/
-    -  assets/quiz_colors/
+    - assets/quiz_colors/
     - assets/quiz_lighting/
     - assets/quiz_feel/
     - assets/quiz_furniture/
     - assets/quiz_rooms/
-    - assets/rooms/
+    # Classic style subfolders
+    - assets/rooms/classic/kichen/
+    - assets/rooms/classic/kids/
+    - assets/rooms/classic/living/
+    - assets/rooms/classic/master/
+    - assets/rooms/classic/office/
+    
+    # Modern style subfolders
+    - assets/rooms/modern/kids/
+    - assets/rooms/modern/kitchen/
+    - assets/rooms/modern/living/
+    - assets/rooms/modern/master/
+    - assets/rooms/modern/office/
+    
+    # Modern Mix style subfolders
+    - assets/rooms/modern_mix/kids/
+    - assets/rooms/modern_mix/kitchen/
+    - assets/rooms/modern_mix/living/
+    - assets/rooms/modern_mix/master/
+    - assets/rooms/modern_mix/office/
+    
+    # Vintage style subfolders
+    - assets/rooms/vintage/kids/
+    - assets/rooms/vintage/kitchen/
+    - assets/rooms/vintage/living/
+    - assets/rooms/vintage/master/
+    - assets/rooms/vintage/office/
 
 
 
