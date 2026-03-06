@@ -180,6 +180,7 @@ class StyleQuizResultScreen extends StatelessWidget {
                                     styleId: result.styleId,
                                     styleTitle: result.styleTitle,
                                     backgroundAssetPath: result.backgroundAssetPath,
+                                    prompt: result.toPrompt()
                                   ),
                                 ),
                               );

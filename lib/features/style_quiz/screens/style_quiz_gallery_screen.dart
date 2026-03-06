@@ -8,6 +8,7 @@ class StyleQuizGalleryScreen extends StatelessWidget {
   final String styleTitle;
   final RoomType roomType;
   final String backgroundAssetPath;
+  final String? prompt;
 
   const StyleQuizGalleryScreen({
     super.key,
@@ -15,6 +16,7 @@ class StyleQuizGalleryScreen extends StatelessWidget {
     required this.styleTitle,
     required this.roomType,
     required this.backgroundAssetPath,
+    this.prompt
   });
 
   static const Color _sandBeige = Color(0xFFE6D3A3);
@@ -104,7 +106,8 @@ class StyleQuizGalleryScreen extends StatelessWidget {
                                 builder: (_) => StyleQuizPreviewScreen(
                                   title: styleTitle,                  // أو إذا بدك: '$styleTitle Style'
                                   selectedImageAsset: path,           // الصورة اللي كبستي عليها
-                                  backgroundAssetPath: backgroundAssetPath, // نفس خلفية الجيليري
+                                  backgroundAssetPath: backgroundAssetPath,
+                                  prompt: prompt // نفس خلفية الجيليري
                                 ),
                               ),
                             );

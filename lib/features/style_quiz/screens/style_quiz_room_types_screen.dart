@@ -54,12 +54,14 @@ class StyleQuizRoomTypesScreen extends StatelessWidget {
   final String styleId;
   final String styleTitle;
   final String backgroundAssetPath;
+  final String? prompt;
 
   const StyleQuizRoomTypesScreen({
     super.key,
     required this.styleId,
     required this.styleTitle,
     required this.backgroundAssetPath,
+    this.prompt
   });
 
   static const Color _sandBeige = Color(0xFFDCC7A1);
@@ -74,6 +76,7 @@ class StyleQuizRoomTypesScreen extends StatelessWidget {
           styleTitle: styleTitle,
           roomType: roomType,
           backgroundAssetPath: backgroundAssetPath,
+          prompt: prompt
         ),
       ),
     );

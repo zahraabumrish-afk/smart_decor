@@ -164,12 +164,12 @@ class StyleQuizQuestion {
 /// نتيجة الاختبار (هذا اللي كان ناقص ✅)
 @immutable
 class StyleQuizResult {
-  final String styleId;              // modern مثلا
-  final String styleTitle;           // Modern Style
-  final String shortDescription;     // جملة قصيرة
-  final List<String> reasons;        // نقاط التفسير
-  final double confidence;           // 0.0 -> 1.0
-  final String backgroundAssetPath;  // خلفية شاشة النتيجة
+  final String styleId;              
+  final String styleTitle;           
+  final String shortDescription;     
+  final List<String> reasons;        
+  final double confidence;           
+  final String backgroundAssetPath;  
 
   const StyleQuizResult({
     required this.styleId,
@@ -179,4 +179,39 @@ class StyleQuizResult {
     required this.confidence,
     required this.backgroundAssetPath,
   });
+
+  /// Converts quiz result into a detailed AI image generation prompt
+  String toPrompt({
+    String? roomType,
+    String? additionalDetails,
+  }) {
+    final String confidencePercent = (confidence * 100).toStringAsFixed(0);
+
+    final String reasonsText = reasons.isNotEmpty
+        ? reasons.map((r) => "- $r").join("\n")
+        : "No specific design constraints provided.";
+
+    return '''
+Create a high-quality interior design visualization based on the following style analysis:
+
+Style ID: $styleId
+Style Name: $styleTitle
+
+Style Description:
+$shortDescription
+
+Design Characteristics:
+$reasonsText
+
+Confidence Level:
+$confidencePercent%
+
+${roomType != null ? "Room Type: $roomType\n" : ""}
+${additionalDetails != null ? "Additional Requirements: $additionalDetails\n" : ""}
+
+Generate a realistic, professionally styled interior scene.
+Use cohesive materials, proper lighting, balanced composition, and high-resolution rendering.
+The final result should strongly reflect the $styleTitle aesthetic with clear visual identity.
+''';
+  }
 }
