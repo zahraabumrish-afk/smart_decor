@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'style_quiz_saved_designs_screen.dart';
+
 class StyleQuizGenerateScreen extends StatelessWidget {
   const StyleQuizGenerateScreen({
     super.key,
@@ -8,14 +9,16 @@ class StyleQuizGenerateScreen extends StatelessWidget {
     required this.selectedImageAsset,
     required this.backgroundAssetPath,
     required this.selectedColor,
+    this.generatedImageUrl, // الرابط الجديد (اختياري)
   });
 
   final String title;
   final String selectedImageAsset;
   final String backgroundAssetPath;
   final Color selectedColor;
+  final String? generatedImageUrl; // المتغير الجديد لاستقبال رابط AI
 
-  static const Color sand = Color(0xFFD8C3A5); // بيج رملي
+  static const Color sand = Color(0xFFD8C3A5); 
   static const Color darkText = Color(0xFF1F1B16);
 
   @override
@@ -23,6 +26,7 @@ class StyleQuizGenerateScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
+          // Background
           Positioned.fill(
             child: Image.asset(
               backgroundAssetPath.isNotEmpty ? backgroundAssetPath : 'assets/backgrounds/1.jpg',
@@ -49,7 +53,7 @@ class StyleQuizGenerateScreen extends StatelessWidget {
                   const SizedBox(height: 18),
 
                   Text(
-                    title.replaceAll("Preview", "Generate"),
+                    title.replaceAll("Preview", "Final Design"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -66,50 +70,62 @@ class StyleQuizGenerateScreen extends StatelessWidget {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // نفس الصورة المختارة (Concept قبل AI الحقيقي)
+                            // منطقة عرض الصورة (AI أو Asset)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(18),
-                              child: Stack(
-                                children: [
-                                  AspectRatio(
-                                    aspectRatio: 16 / 10,
-                                    child: Stack(
-                                      fit: StackFit.expand,
-                                      children: [
-                                        Image.asset(
-                                          selectedImageAsset,
-                                          fit: BoxFit.cover,
-                                        ),
+                              child: AspectRatio(
+                                aspectRatio: 16 / 10,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    // المنطق البرمجي لاختيار مصدر الصورة
+                                    generatedImageUrl != null && generatedImageUrl!.isNotEmpty
+                                        ? Image.network(
+                                            generatedImageUrl!,
+                                            fit: BoxFit.cover,
+                                            // أثناء التحميل من الرابط
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Container(
+                                                color: Colors.black26,
+                                                child: const Center(
+                                                  child: CircularProgressIndicator(color: sand),
+                                                ),
+                                              );
+                                            },
+                                            // في حال فشل الرابط
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Image.asset(selectedImageAsset, fit: BoxFit.cover);
+                                            },
+                                          )
+                                        : Image.asset(
+                                            selectedImageAsset,
+                                            fit: BoxFit.cover,
+                                          ),
 
-                                        // ✅ شَفّة لون خفيفة على صورة النص فقط
-                                        Container(
-                                          color: selectedColor.withOpacity(0.18),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // لمسة بسيطة جدًا لتوضيح اختيار اللون (بدون إطار)
-                                  Positioned.fill(
-                                    child: Container(
-                                      color: selectedColor.withOpacity(0.08),
-                                    ),
-                                  ),
-                                ],
+                                    // طبقة اللون (تظهر فقط إذا لم تكن صورة AI لتوضيح المفهوم)
+                                    if (generatedImageUrl == null)
+                                      Container(
+                                        color: selectedColor.withOpacity(0.18),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
 
                             const SizedBox(height: 18),
 
-                            // زر حفظ/اكمال (بيج رملي)
+                            // زر حفظ/اكمال
                             _PrimaryButton(
-                              text: "Save Design",
+                              text: "Save Final Design",
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => StyleQuizSavedDesignsScreen(
                                       title: title,
-                                      imageAssetPath: selectedImageAsset,
+                                      // نمرر الرابط كأولوية للحفظ، وإذا لم يوجد نمرر الـ Asset
+                                      imageAssetPath: generatedImageUrl ?? selectedImageAsset,
                                       backgroundAssetPath: backgroundAssetPath,
                                       appliedColor: selectedColor,
                                     ),
@@ -121,11 +137,14 @@ class StyleQuizGenerateScreen extends StatelessWidget {
                             const SizedBox(height: 10),
 
                             Text(
-                              "Selected color is applied as a preview (concept).",
+                              generatedImageUrl != null 
+                                  ? "AI has successfully generated your design."
+                                  : "Selected color is applied as a preview (concept).",
                               style: TextStyle(
                                 color: Colors.white.withOpacity(0.85),
                                 fontSize: 12.5,
-                                fontWeight: FontWeight.w600,),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -144,7 +163,9 @@ class StyleQuizGenerateScreen extends StatelessWidget {
 
 class _BackPill extends StatelessWidget {
   const _BackPill({required this.onTap});
-  final VoidCallback onTap;@override
+  final VoidCallback onTap;
+
+  @override
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(999),

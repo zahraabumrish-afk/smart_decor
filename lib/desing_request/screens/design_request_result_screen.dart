@@ -32,6 +32,7 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
   bool _loading = true;
   String? _error;
   String? _taskId;
+  String _loadingStatus = "Starting..."; // حالة تحميل تفصيلية
 
   // نتيجة الصورة: عادة URL حسب الوثائق
   String? _resultImageUrl;
@@ -39,8 +40,10 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
 
   Timer? _pollTimer;
 
-  // ضع توكنك هنا
-  static const String _apiToken = '';
+  // --- المفاتيح والتهيئة ---
+  // ⚠️ لا تنسَ وضع مفتاح ImgBB هنا
+  static const String _imgBBKey = ' '; 
+  static const String _nanoBananaToken = '';
 
   // endpoints
   static const String _generateUrl =
@@ -51,6 +54,7 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
   @override
   void initState() {
     super.initState();
+    // نبدأ العملية فوراً عند فتح الصفحة
     _startGenerateAndPoll();
   }
 
@@ -60,6 +64,27 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
     super.dispose();
   }
 
+  // دالة مساعدة لرفع الصورة لـ ImgBB وتحويلها لرابط
+  Future<String> _uploadToImgBB(Uint8List imageBytes) async {
+    final String base64Image = base64Encode(imageBytes);
+
+    final response = await http.post(
+      Uri.parse('https://api.imgbb.com/1/upload'),
+      body: {
+        'key': _imgBBKey,
+        'image': base64Image,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['data']['url']; // الرابط المباشر للصورة مرفوعة
+    } else {
+      throw Exception("Image upload to cloud failed. Please check ImgBB Key.");
+    }
+  }
+
+  // الدالة الرئيسية المعدلة لتشمل الرفع ثم التوليد
   Future<void> _startGenerateAndPoll() async {
     setState(() {
       _loading = true;
@@ -67,37 +92,43 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
       _taskId = null;
       _resultImageUrl = null;
       _resultImageBytes = null;
+      _loadingStatus = "Preparing image...";
     });
 
     try {
       // 1) اقرأ بايتس الصورة (ويب أو موبايل)
       Uint8List imageBytes;
-
-      if (widget.webBytes != null) {
+      if (kIsWeb && widget.webBytes != null) {
         imageBytes = widget.webBytes!;
       } else {
         imageBytes = await widget.pickedImage.readAsBytes();
       }
 
-      // 2) شفّر للـ base64
-      final String imageBase64 = base64Encode(imageBytes);
+      // 2) تحويل الصورة المحلية لرابط شبكي (عبر ImgBB) لحل مشكلة blank imageUrls
+      setState(() => _loadingStatus = "Uploading image to cloud...");
+      final String uploadedImageUrl = await _uploadToImgBB(imageBytes);
 
-      // 3) جهّز الـ body — عدّل الحقول وفق ما عمل معك سابقًا إذا لزم
-      // ملاحظة: بعض الـ APIs قد تتطلب اسم حقل مختلف أو multipart؛ هذا مثال JSON مع image_base64
+      // تعزيز البرومت بالنص العربي لضمان التعديل وليس الإنشاء
+      final String enhancedPrompt = "${widget.prompt} . "
+          "يجب تعديل الصورة المرفقة بناءً على الوصف، مع الحفاظ على الهيكل العام للصورة الأصلية "
+          "وتطبيق الأسلوب المطلوب باحترافية وبشكل متناسق.";
+
+      setState(() => _loadingStatus = "AI is generating design...");
+
+      // 3) جهّز الـ body — تم تعديله لاستخدام نمط التعديل (IMAGETOIAMGE) والروابط (imageUrls)
       final Map<String, dynamic> body = {
-        'prompt': widget.prompt,
+        'prompt': enhancedPrompt, // استخدام البرومت المحسن
         'numImages': 1,
-        // استخدم القيمة التي نجحت معك سلفًا (في حال واجهت خطأ قم بتعديل 'type' كما عندك)
-        'type': 'TEXTTOIAMGE',
+        'type': 'IMAGETOIAMGE', // ✅ التصحيح: تغيير النمط لتعديل الصورة
+        'imageUrls': [uploadedImageUrl], // ✅ إرسال الرابط بدلاً من base64
         'image_size': '16:9',
-        'image_base64': imageBase64,
-        // 'callBackUrl': 'https://your-callback-url.com/callback',
+        'callBackUrl': 'https://dummy-callback.com/api', 
       };
 
       final http.Response resp = await http.post(
         Uri.parse(_generateUrl),
         headers: {
-          'Authorization': 'Bearer $_apiToken',
+          'Authorization': 'Bearer $_nanoBananaToken',
           'Content-Type': 'application/json',
         },
         body: jsonEncode(body),
@@ -110,13 +141,12 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
 
       final dynamic decoded = jsonDecode(resp.body);
 
-      // احصل على taskId من أي مكان محتمل في الـ JSON
+      // استخراج taskId من أي مكان محتمل في الـ JSON
       final Map<String, dynamic> decodedMap =
           (decoded is Map) ? Map<String, dynamic>.from(decoded) : {};
 
       String? foundTaskId;
 
-      // إحتمالات استخراج الـ task id من الاستجابة
       if (decodedMap.containsKey('taskId')) {
         foundTaskId = decodedMap['taskId']?.toString();
       } else if (decodedMap.containsKey('data') &&
@@ -127,20 +157,15 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
         } else if (dataMap.containsKey('id')) {
           foundTaskId = dataMap['id']?.toString();
         }
-      } else if (decodedMap.containsKey('id')) {
-        foundTaskId = decodedMap['id']?.toString();
-      } else if (decodedMap.containsKey('recordId')) {
-        foundTaskId = decodedMap['recordId']?.toString();
       }
 
-      // احتطاط: لو لم نجد taskId سنستعمل حقل 'data' أو 'id' إن وجد
       setState(() {
         _taskId = foundTaskId;
       });
 
-      // ابدأ polling — حسب الوثائق endpoint يتطلب query param اسمه taskId
+      // ابدأ polling للتأكد من حالة التصميم
       _pollTimer?.cancel();
-      _pollTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) {
         _pollOnce();
       });
 
@@ -148,51 +173,39 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
       _pollTimer?.cancel();
       setState(() {
         _loading = false;
-        _error = 'Generate request failed: $e';
+        _error = 'Process failed: $e';
       });
-      // طباعة للوحدة التطويرية
       debugPrint('Generate error: $e\n$st');
     }
   }
 
   Future<void> _pollOnce() async {
     try {
-      // if no taskId, call without param (some installs may allow global check) — لكن docs تطلب taskId
-      Uri uri;
-      if (_taskId != null) {
-        uri = Uri.parse(_recordInfoUrl).replace(queryParameters: {
-          'taskId': _taskId!,
-        });
-      } else {
-        uri = Uri.parse(_recordInfoUrl);
-      }
+      if (_taskId == null) return;
+
+      Uri uri = Uri.parse(_recordInfoUrl).replace(queryParameters: {
+        'taskId': _taskId!,
+      });
 
       final http.Response resp = await http.get(uri, headers: {
-        'Authorization': 'Bearer $_apiToken',
+        'Authorization': 'Bearer $_nanoBananaToken',
         'Content-Type': 'application/json',
       });
 
       if (resp.statusCode == 404) {
-        // لم يجد المهمة بعد
         debugPrint('record-info 404: task not found yet');
         return;
       }
 
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        // لا نلغي polling لمجرد خطأ مؤقت، لكن نعرض في الـ console
         debugPrint('record-info failed: ${resp.statusCode} ${resp.body}');
         return;
       }
 
       final dynamic decoded = jsonDecode(resp.body);
-      if (decoded is! Map) {
-        debugPrint('Unexpected record-info response format');
-        return;
-      }
+      if (decoded is! Map) return;
 
       final Map<String, dynamic> map = Map<String, dynamic>.from(decoded);
-
-      // الوثائق توضح بنية: { code, msg, data: { taskId, response: { originImageUrl, resultImageUrl }, successFlag, ... } }
       Map<String, dynamic>? data;
       if (map.containsKey('data') && map['data'] is Map) {
         data = Map<String, dynamic>.from(map['data']);
@@ -200,32 +213,19 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
 
       int? successFlag;
       if (data != null && data.containsKey('successFlag')) {
-        final sf = data['successFlag'];
-        if (sf is int) successFlag = sf;
-        else {
-          // قد يكون String
-          successFlag = int.tryParse(sf?.toString() ?? '');
-        }
+        successFlag = int.tryParse(data['successFlag']?.toString() ?? '');
       }
 
-      // ابحث عن resultImageUrl داخل data.response.*
       String? resultImageUrl;
-      String? originImageUrl;
       if (data != null && data.containsKey('response') && data['response'] is Map) {
         final responseMap = Map<String, dynamic>.from(data['response']);
         if (responseMap.containsKey('resultImageUrl')) {
           resultImageUrl = responseMap['resultImageUrl']?.toString();
         }
-        if (responseMap.containsKey('originImageUrl')) {
-          originImageUrl = responseMap['originImageUrl']?.toString();
-        }
       }
 
-      // إن وجد resultImageUrl أو successFlag == 1 نوقف polling ونعرض النتيجة
-      final bool finished =
-          (successFlag != null && successFlag == 1) || resultImageUrl != null;
-
-      if (finished) {
+      if (successFlag == 1 || resultImageUrl != null) {
+        // نجاح عملية AI
         _pollTimer?.cancel();
 
         setState(() {
@@ -233,52 +233,13 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
           _error = null;
           _resultImageUrl = resultImageUrl;
         });
-
-        // بعض الحالات قد تعيد الصورة كـ base64 داخل response (نادر حسب docs)
-        // لذا نحاول العثور على أي base64 داخل الحقول
-        Uint8List? maybeBytes;
-        // تحقق استدعاء أعمق (response may contain images list)
-        if (data != null && data.containsKey('response')) {
-          final respObj = data['response'];
-          // محاولة استخراج base64 من عناصر images إن وُجدت
-          if (respObj is Map) {
-            final rmap = Map<String, dynamic>.from(respObj);
-            if (rmap.containsKey('images') && rmap['images'] is List) {
-              final list = rmap['images'] as List;
-              if (list.isNotEmpty) {
-                final first = list[0];
-                if (first is String) {
-                  // قد تكون data url أو base64
-                  if (first.startsWith('data:')) {
-                    final comma = first.indexOf(',');
-                    if (comma != -1) {
-                      final base64part = first.substring(comma + 1);
-                      try {
-                        maybeBytes = base64Decode(base64part);
-                      } catch (_) {}
-                    }
-                  } else {
-                    try {
-                      maybeBytes = base64Decode(first);
-                    } catch (_) {}
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if (maybeBytes != null) {
-          setState(() => _resultImageBytes = maybeBytes);
-        }
-
         return;
       }
 
-      // إذا كانت هناك حالة فشل (successFlag == 2 أو 3) اعرض خطأ
+      // إذا كانت هناك حالة فشل على السيرفر
       if (successFlag != null && (successFlag == 2 || successFlag == 3)) {
         _pollTimer?.cancel();
-        String errMsg = 'Generation failed (status $successFlag).';
+        String errMsg = 'Generation failed on server.';
         if (data != null && data.containsKey('errorMessage')) {
           errMsg += ' ${data['errorMessage']}';
         }
@@ -289,10 +250,8 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
         return;
       }
 
-      // بخلاف ذلك ننتظر next poll
     } catch (e, st) {
       debugPrint('poll error: $e\n$st');
-      // لا نلغي polling؛ لكن اذا أردت يمكنك إلغاء بعد عدة محاولات
     }
   }
 
@@ -307,15 +266,20 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          Image.asset(
-            'assets/backgrounds/1.jpg',
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
+          // Background المضبب التابع لتصميم الصفحة
+          Positioned.fill(
+            child: Image.asset(
+              'assets/backgrounds/1.jpg',
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.cover,
+            ),
           ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: Colors.black.withOpacity(0.25)),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(color: Colors.black.withOpacity(0.25)),
+            ),
           ),
           SafeArea(
             child: Column(
@@ -344,12 +308,13 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                 const SizedBox(height: 6),
 
                 const Text(
-                  'Result',
+                  'AI Design Result',
                   style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800),
                 ),
 
                 const SizedBox(height: 14),
 
+                // منطقة عرض النتائج بالتصميم الأصلي
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -365,11 +330,13 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // preview original image
+                            // 1. عرض صورة الدخل (Picked Image) للمقارنة
+                            const Text('Original Image:', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: SizedBox(
-                                height: 300,
+                                height: 280,
                                 child: kIsWeb
                                     ? (widget.webBytes != null
                                         ? Image.memory(widget.webBytes!, fit: BoxFit.cover)
@@ -377,9 +344,7 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                                     : FutureBuilder<Uint8List>(
                                         future: widget.pickedImage.readAsBytes(),
                                         builder: (context, snap) {
-                                          if (snap.connectionState != ConnectionState.done) {
-                                            return _loadingBox();
-                                          }
+                                          if (snap.connectionState != ConnectionState.done) return _loadingBox();
                                           if (!snap.hasData) return _placeholderImage();
                                           return Image.memory(snap.data!, fit: BoxFit.cover);
                                         },
@@ -387,14 +352,14 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                               ),
                             ),
                             const SizedBox(height: 14),
-                            const Text('Your request:',
-                                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700)),
+                            const Text('Modification Request:', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 6),
-                            Text(widget.prompt.isEmpty ? '(No text entered)' : widget.prompt,
-                                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 14),
+                            Text(widget.prompt, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 18),
 
-                            // result area
+                            // 2. منطقة عرض نتيجة AI (The modified image)
+                            const Text('AI Modified Result:', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 10),
                             Container(
                               height: 320,
                               padding: const EdgeInsets.all(14),
@@ -403,18 +368,12 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(color: Colors.white.withOpacity(0.18)),
                               ),
-                              child: _buildResultArea(),
+                              child: _buildResultArea(), // تعرض الـ Loading ثم الصورة النهائية
                             ),
                             const SizedBox(height: 14),
 
-                            // عرض بعض بيانات الحالة
-                            if (_taskId != null)
-                              Text('taskId: $_taskId', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                            if (_loading)
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8.0),
-                                child: Text('Processing...', style: TextStyle(color: Colors.white70)),
-                              ),
+                            if (_taskId != null && _loading)
+                              Text('Tracking ID: $_taskId', style: const TextStyle(color: Colors.white54, fontSize: 11)),
                           ],
                         ),
                       ),
@@ -424,6 +383,7 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
 
                 const SizedBox(height: 14),
 
+                // زر العودة التابع للتصميم الأصلي
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   child: Center(
@@ -441,7 +401,7 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
                           elevation: 0,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: const Text('Back to Chat', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                        child: const Text('New Request', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
                       ),
                     ),
                   ),
@@ -456,17 +416,20 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
     );
   }
 
+  // دالة عرض منطقة النتيجة (Loading -> Error -> Success Image)
   Widget _buildResultArea() {
     if (_error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 40),
             const SizedBox(height: 12),
+            Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent)),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _retry,
-              child: const Text('Retry'),
+              child: const Text('Try Again'),
             )
           ],
         ),
@@ -476,26 +439,40 @@ class _DesignRequestResultScreenState extends State<DesignRequestResultScreen> {
     if (_loading) {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          CircularProgressIndicator(),
-          SizedBox(height: 10),
-          Text('Processing... please wait', style: TextStyle(color: Colors.white70)),
+        children: [
+          const CircularProgressIndicator(color: Colors.white),
+          const SizedBox(height: 16),
+          // عرض حالة تحميل تفصيلية (Uploading... Editing...)
+          Text(_loadingStatus, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Processing... please wait', style: TextStyle(color: Colors.white70, fontSize: 12)),
         ],
       );
     }
 
-    if (_resultImageBytes != null) {
-      return Image.memory(_resultImageBytes!, fit: BoxFit.contain);
-    }
-
     if (_resultImageUrl != null) {
-      return Image.network(_resultImageUrl!, fit: BoxFit.contain);
+      // نجاح: عرض الصورة النهائية بناءً على الرابط الشبكي القادم من AI
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          _resultImageUrl!,
+          fit: BoxFit.contain,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          errorBuilder: (ctx, err, stack) {
+            return const Center(child: Text("Failed to load result image", style: TextStyle(color: Colors.white70)));
+          },
+        ),
+      );
     }
 
+    // احتياط في حال لم يكن هناك نتيجة ولا تحميل
     return const Align(
-      alignment: Alignment.topLeft,
+      alignment: Alignment.center,
       child: Text(
-        'AI result will appear here later.\n(Waiting for the server result)',
+        'AI final design will appear here.',
         style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
       ),
     );
