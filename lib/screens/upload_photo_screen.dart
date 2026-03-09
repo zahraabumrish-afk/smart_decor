@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart'; // أضفنا هذا الاستيراد للتحقق من المنصة
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -25,7 +26,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
     RoomAngle.back: null,
   };
 
-  // Your design colors (same style)
+  // Your design colors
   static const Color _btnBg = Color(0xFFE5C9A8);
   static const Color _btnFg = Color(0xFF3B2A1E);
 
@@ -33,27 +34,19 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   String _label(RoomAngle a) {
     switch (a) {
-      case RoomAngle.front:
-        return "Front";
-      case RoomAngle.right:
-        return "Right";
-      case RoomAngle.left:
-        return "Left";
-      case RoomAngle.back:
-        return "Back";
+      case RoomAngle.front: return "Front";
+      case RoomAngle.right: return "Right";
+      case RoomAngle.left: return "Left";
+      case RoomAngle.back: return "Back";
     }
   }
 
   IconData _icon(RoomAngle a) {
     switch (a) {
-      case RoomAngle.front:
-        return Icons.crop_portrait;
-      case RoomAngle.right:
-        return Icons.chevron_right;
-      case RoomAngle.left:
-        return Icons.chevron_left;
-      case RoomAngle.back:
-        return Icons.flip_camera_android;
+      case RoomAngle.front: return Icons.crop_portrait;
+      case RoomAngle.right: return Icons.chevron_right;
+      case RoomAngle.left: return Icons.chevron_left;
+      case RoomAngle.back: return Icons.flip_camera_android;
     }
   }
 
@@ -68,7 +61,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
       setState(() => _images[angle] = file);
     } catch (_) {
-      // keep silent (no crash)
+      // keep silent
     }
   }
 
@@ -138,9 +131,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
   void _continue() {
     if (!_allSelected) return;
-
     final XFile? front = _images[RoomAngle.front];
-
     if (front == null) return;
 
     Navigator.push(
@@ -150,123 +141,108 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
       ),
     );
   }
+
   @override
-  Widget build(BuildContext context) {return Scaffold(
-    body: Stack(
-      children: [
-        // Background image
-        Image.asset(
-          'assets/backgrounds/1.jpg',
-          width: double.infinity,
-          height: double.infinity,
-          fit: BoxFit.cover,
-        ),
-
-        // Blur overlay
-        BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-          child: Container(color: Colors.black.withOpacity(0.25)),
-        ),
-
-        // Back button (same as your style)
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                label: const Text('Back', style: TextStyle(color: Colors.white)),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.black.withOpacity(0.25),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          Image.asset(
+            'assets/backgrounds/1.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          ),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+            child: Container(color: Colors.black.withOpacity(0.25)),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: TextButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  label: const Text('Back', style: TextStyle(color: Colors.white)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.black.withOpacity(0.25),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-
-        // Content
-        SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 18),
-                  const Text(
-                    "Upload Room Images",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 18),
+                    const Text(
+                      "Upload Room Images",
+                      style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Please add 4 photos from different angles",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.88),
-                      fontSize: 14,
+                    const SizedBox(height: 8),
+                    Text(
+                      "Please add 4 photos from different angles",
+                      style: TextStyle(color: Colors.white.withOpacity(0.88), fontSize: 14),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // 2x2 grid
-                  _grid(),
-
-                  const SizedBox(height: 18),
-
-                  // Continue button
-                  SizedBox(
-                    width: 280,
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _allSelected ? _continue : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _btnBg,
-                        foregroundColor: _btnFg,
-                        disabledBackgroundColor: _btnBg.withOpacity(0.45),
-                        disabledForegroundColor: _btnFg.withOpacity(0.55),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(_allSelected ? Icons.check_circle : Icons.lock),
-                          const SizedBox(width: 10),
-                          Text(_allSelected ? "Continue" : "Add all 4 photos"),
-                        ],
+                    const SizedBox(height: 16),
+                    _grid(),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: 280,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _allSelected ? _continue : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _btnBg,
+                          foregroundColor: _btnFg,
+                          disabledBackgroundColor: _btnBg.withOpacity(0.45),
+                          disabledForegroundColor: _btnFg.withOpacity(0.55),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(_allSelected ? Icons.check_circle : Icons.lock),
+                            const SizedBox(width: 10),
+                            Text(_allSelected ? "Continue" : "Add all 4 photos"),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 10),
-                ],
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-  }Widget _grid() {
+        ],
+      ),
+    );
+  }
+
+  Widget _grid() {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 360),
       child: Column(
-        children: [Row(
-          children: [
-            Expanded(child: _tile(RoomAngle.front)),
-            const SizedBox(width: 12),
-            Expanded(child: _tile(RoomAngle.right)),
-          ],
-        ),
+        children: [
+          Row(
+            children: [
+              Expanded(child: _tile(RoomAngle.front)),
+              const SizedBox(width: 12),
+              Expanded(child: _tile(RoomAngle.right)),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -297,20 +273,17 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
           ),
           child: Stack(
             children: [
+              // الإصلاح هنا: التحقق إذا كان التطبيق يعمل على الويب أم لا
               if (file != null)
                 Positioned.fill(
-                  child: Image.file(
-                    File(file.path),
-                    fit: BoxFit.cover,
-                  )
+                  child: kIsWeb
+                      ? Image.network(file.path, fit: BoxFit.cover)
+                      : Image.file(File(file.path), fit: BoxFit.cover),
                 ),
 
-              // dark overlay for readability
               Positioned.fill(
                 child: Container(color: Colors.black.withOpacity(file != null ? 0.12 : 0.18)),
               ),
-
-              // center content
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -330,8 +303,6 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                   ],
                 ),
               ),
-
-              // small edit hint bottom
               Positioned(
                 left: 10,
                 right: 10,

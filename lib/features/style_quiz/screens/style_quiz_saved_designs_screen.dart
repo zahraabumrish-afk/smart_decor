@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:smart_decor/features/style_quiz/screens/style_quiz_upload_room_images_screen.dart';
-
-// ✅ Backend (Style Quiz - Path 2)
 import 'package:smart_decor/features/style_quiz/data/repositories/room_session_repository.dart';
 
-/// ✅ شاشة حفظ التصميم (Saved Design) - بدون Blur، فقط غباش خفيف جداً
-/// تعرض الخلفية + صورة التصميم بالوسط + زر يروح لشاشة رفع صور الغرفة
 class StyleQuizSavedDesignsScreen extends StatelessWidget {
-  final String title; // اسم الستايل/العنوان
-  final String imageAssetPath; // صورة التصميم الذي اخترتيه (Asset)
-  final String backgroundAssetPath; // الخلفية
-  final Color appliedColor; // اللون المختار (شفّة خفيفة على الصورة)
-
-  /// ✅ (اختياري) باليتة Hex لعرضها لاحقاً في شاشة Apply Preview
+  final String title;
+  final String imageAssetPath; // قد يكون مسار محلي أو رابط URL
+  final String backgroundAssetPath;
+  final Color appliedColor;
   final List<String> paletteHex;
 
   const StyleQuizSavedDesignsScreen({
@@ -24,7 +18,29 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
     this.paletteHex = const [],
   });
 
-  // ✅ تحويل عنوان الستايل إلى styleId بسيط (بدون ما نضيف باراميتر جديد)
+  // دالة مساعدة لاختيار نوع الـ Widget المناسب للصورة
+  Widget _buildDynamicImage(String path, {BoxFit fit = BoxFit.cover, double? width, double? height}) {
+    if (path.startsWith('http')) {
+      return Image.network(
+        path,
+        fit: fit,
+        width: width,
+        height: height,
+        // معالجة حالة فشل التحميل من الإنترنت
+        errorBuilder: (context, error, stackTrace) => const Center(
+          child: Icon(Icons.broken_image, color: Colors.white, size: 40),
+        ),
+      );
+    } else {
+      return Image.asset(
+        path,
+        fit: fit,
+        width: width,
+        height: height,
+      );
+    }
+  }
+
   String _styleIdFromTitle(String t) {
     return t
         .trim()
@@ -37,7 +53,6 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
   Future<void> _openUploadWithSession(BuildContext context) async {
     String? sessionId;
 
-    // Loading صغير (بدون أي تغيير تصميم الشاشة)
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -46,7 +61,6 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
 
     try {
       final repo = RoomSessionRepository();
-
       sessionId = await repo.createSession(
         styleId: _styleIdFromTitle(title),
         styleTitle: title,
@@ -54,20 +68,16 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
         paletteHex: paletteHex,
       );
     } catch (e) {
-      // sqflite ما يشتغل على الويب أو أي خطأ آخر
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'DB is not available on Web. Run on Android/iOS to test backend.\n$e',
-          ),
+          content: Text('Error: $e'),
         ),
       );
       sessionId = null;
     } finally {
-      if (Navigator.of(context).canPop()) Navigator.of(context).pop(); // close loading
+      if (Navigator.of(context).canPop()) Navigator.of(context).pop();
     }
 
-    // روح على شاشة رفع الصور (مع sessionId إذا توفر)
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -75,7 +85,7 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
           styleTitle: title,
           designImageAssetPath: imageAssetPath,
           paletteHex: paletteHex,
-          sessionId: sessionId, // ✅ لازم نضيفها بالملف الثاني (Upload) كـ optional
+          sessionId: sessionId,
         ),
       ),
     );
@@ -86,104 +96,91 @@ class StyleQuizSavedDesignsScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-      // الخلفية
-      Positioned.fill(
-      child: Image.asset(
-        backgroundAssetPath,
-        fit: BoxFit.cover,
-      ),
-    ),
+          // الخلفية
+          Positioned.fill(
+            child: _buildDynamicImage(backgroundAssetPath),
+          ),
 
-    // ✅ غباش خفيف جداً فقط (بدون blur)
-    Positioned.fill(
-    child: Container(
-    color: Colors.black.withOpacity(0.14),
-    ),
-    ),
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.14),
+            ),
+          ),
 
-    SafeArea(
-    child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    _BackPill(onTap: () => Navigator.pop(context)),
-    const SizedBox(height: 14),
-
-    const Text(
-    "Saved Design",
-    style: TextStyle(
-    color: Colors.white,
-    fontSize: 22,
-    fontWeight: FontWeight.w800,
-    ),
-    ),
-    const SizedBox(height: 6),
-    Text(
-    title,
-    style: TextStyle(
-    color: Colors.white.withOpacity(0.85),
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    ),
-    ),const SizedBox(height: 14),
-
-      // ✅ الصورة بالوسط
-      Expanded(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Stack(
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AspectRatio(
-                    aspectRatio: 16 / 10,
-                    child: Image.asset(
-                      imageAssetPath,
-                      fit: BoxFit.cover,
+                  _BackPill(onTap: () => Navigator.pop(context)),
+                  const SizedBox(height: 14),
+                  const Text(
+                    "Saved Design",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // الصورة بالوسط
+                  Expanded(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 640),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Stack(
+                            children: [
+                              AspectRatio(
+                                aspectRatio: 16 / 10,
+                                child: _buildDynamicImage(imageAssetPath),
+                              ),
+                              Positioned.fill(
+                                child: Container(
+                                  color: appliedColor.withOpacity(0.22),
+                                ),
+                              ),
+                              Positioned.fill(
+                                child: Container(
+                                  color: Colors.black.withOpacity(0.05),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
 
-                  // ✅ شفّة لون خفيفة على الصورة (مو على الشاشة)
-                  Positioned.fill(
-                    child: Container(
-                      color: appliedColor.withOpacity(0.22),
-                    ),
+                  const SizedBox(height: 14),
+                  _PrimaryButton(
+                    text: "Upload Room Photos",
+                    onTap: () => _openUploadWithSession(context),
                   ),
-
-                  // ✅ طبقة خفيفة جداً لتحسين وضوح الصورة
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black.withOpacity(0.05),
-                    ),
-                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
           ),
-        ),
-      ),
-
-      const SizedBox(height: 14),
-
-      // ✅ زر يودّي لشاشة رفع 4 صور + createSession
-      _PrimaryButton(
-        text: "Upload Room Photos",
-        onTap: () => _openUploadWithSession(context),
-      ),
-
-      const SizedBox(height: 8),
-    ],
-    ),
-    ),
-    ),
         ],
       ),
     );
   }
 }
 
+// الكلاسات المساعدة (تلقائية كما هي في الكود الأصلي)
 class _BackPill extends StatelessWidget {
   const _BackPill({required this.onTap});
   final VoidCallback onTap;
@@ -207,10 +204,7 @@ class _BackPill extends StatelessWidget {
             SizedBox(width: 6),
             Text(
               "Back",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
             ),
           ],
         ),
